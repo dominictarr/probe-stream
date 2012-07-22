@@ -1,6 +1,6 @@
 {
   "name": "probe-stream",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "streamable metrics.",
   "main": "index.js",
   "directories": {
