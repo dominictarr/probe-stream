@@ -63,7 +63,8 @@ it must return an object of metrics. It will be passed an instance
 of [measured](https:/github.com/felixge/node-measured) as the first argument.
 
 `create` is called whenever you create a probe with `probe.createProbe()`.
-`create` is called in the context of the new probe stream. It should return an 
-object of listeners, these will be assigned to the probe stream, and cleaned up 
-automatically when the stream ends. You can also assign listeners manually, it's up to you.
+`create` is called in the context of the new probe stream. The first arg is the metrics object
+that `init` returned. `create` should return an object of listeners, these will be assigned to 
+the probe stream, and cleaned up automatically when the stream ends. 
 
+You can also assign listeners manually, it's up to you.
