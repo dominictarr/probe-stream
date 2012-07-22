@@ -12,11 +12,12 @@ var map  = iterate.map
 module.exports = Probe
 
 inherits(Probe, Stream)
-function Probe (init, create, interval) {
-  if(!(this instanceof Probe)) return new Probe(init, create, interval)
-  init   = init   || defaultInit
-  this._create = create || defaultCreate
-  interval = interval || 1e3
+function Probe (opts) {
+  if(!(this instanceof Probe)) return new Probe(opts)
+  opts = opts || {}
+  init   = opts.init   || defaultInit
+  this._create = opts.create || defaultCreate
+  interval = opts.interval || 1e3
 
   this.metrics = init (measured)
   this.streams = []
@@ -32,20 +33,37 @@ function Probe (init, create, interval) {
   self._interval = setInterval(this.emitData, 1e3)
 }
 
+function addListeners(emitter, listeners) {
+  if(!listeners) return
+  each(listeners, function (l, e) {
+    emitter.on(e, l)
+  })
+}
+
+function removeListeners(emitter, listeners) {
+  if(!listeners) return
+  each(listeners, function (l, e) {
+    emitter.removeListener(e, l)
+  })
+}
+
 Probe.prototype.createProbeStream =
 Probe.prototype.createProbe =
 Probe.prototype.createStream = function (name) {
   name = name || 'default'
   var stream = through() 
   var self = this
-  this._create.call(stream, this.metrics)
+  var cleaners = {end: cleanup, close: cleanup, error: cleanup}
+  var listeners = this._create.call(stream, this.metrics)
+
+  addListeners(stream, listeners)
+  addListeners(stream, cleaners)
 
   function cleanup () {
     var i = self.streams.indexOf(stream)
     self.streams.splice(i, 1)
-    each(['end', 'close', 'error'], function (e) {
-      stream.removeListener(e, cleanup)
-    })
+    removeListeners(stream, listeners)
+    removeListeners(stream, cleaners)
     self.emit('remove', stream)
   }
 
@@ -93,7 +111,10 @@ function defaultCreate (m) {
   //this is the stream.
   var self = this
   m.streams.inc()
-  var listeners = {
+  function onEnd () {
+    m.streams.dec()
+  }
+  return {
     data: function (data, encoding) {
       var length = (
           typeof data == 'string' 
@@ -104,24 +125,6 @@ function defaultCreate (m) {
       )
       m.rate.mark(length)
     },
-    /*pause: function () {
-      m.pause.mark()
-      //self.once('drain', function () {
-      //  s.end()
-      //})
-    },*/
-    end: cleanup, close: cleanup, error: cleanup
+    end: onEnd, close: onEnd, error: onEnd
   } 
-
-  function cleanup() {
-    each(listeners, function (listener, event) {
-      self.removeListener(event, listener)
-    })
-    m.streams.dec()
-  }
-
-  each(listeners, function (listener, event) {
-    self.on(event, listener) 
-  })
-  
 }
