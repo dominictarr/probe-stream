@@ -26,9 +26,12 @@ function Probe (opts) {
   var self = this
 
   this.emitData = function () {
-    self.emit('data', self.metrics[N] ? self.metrics[N]() : map(self.metrics, function (e) {
+    var data = self.metrics[N] ? self.metrics[N]() : map(self.metrics, function (e) {
       return e[N]()
-    }))
+    })
+
+    data._timestamp = Date.now()
+    self.emit('data', data)
   }
   self._interval = setInterval(this.emitData, 1e3)
 }
